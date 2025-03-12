@@ -160,15 +160,9 @@ def display_station_details(station_label, station_id):
             
             # Update the query parameter when the reading type changes
             if selected_type != default_reading_type:
-                # Preserve the embedded parameter value
-                embedded_value = st.query_params.get("embedded", "false")
-                
-                # Update query parameters
                 st.query_params["reading_type"] = selected_type
                 st.query_params["view"] = "detail"
                 st.query_params["station"] = station_label
-                st.query_params["embedded"] = embedded_value
-                
                 st.rerun()
             
             # Filter readings by the selected type
@@ -181,6 +175,7 @@ def display_station_details(station_label, station_id):
     else:
         st.warning("There are no readings available for this station.")
 
+@st.cache_data(ttl=3600)
 def display_map(station_info):
     """Display a map with markers for all stations"""
     if not is_embedded:
@@ -205,13 +200,10 @@ def display_map(station_info):
             if "reading_type" in st.query_params:
                 reading_type_param = f"&reading_type={st.query_params['reading_type']}"
             
-            # Get the current embedded parameter value
-            embedded_value = st.query_params.get("embedded", "false")
-            
-            # Add embedded parameter to the URL to maintain the current view state
+            # Add embedded=true parameter to the URL to indicate this is an embedded view
             popup_html = f"""
             <b>{station['label']}</b><br>
-            <a href="?view=detail&station={station['label']}{reading_type_param}&embedded={embedded_value}">View Readings</a>
+            <a href="?view=detail&station={station['label']}{reading_type_param}&embedded=true">View Readings</a>
             """
             
             # Use CircleMarker instead of Marker for smaller representation
@@ -264,13 +256,9 @@ if not is_embedded:
     
     # Add button to switch stations
     if st.sidebar.button("Show Selected Station"):
-        # Preserve the embedded parameter value
-        embedded_value = st.query_params.get("embedded", "false")
-        
         st.query_params["view"] = "detail"
         st.query_params["station"] = selected_station
-        st.query_params["embedded"] = embedded_value
-        
+        st.query_params["embedded"] = "false"
         # Preserve reading_type if it exists
         if "reading_type" in st.query_params:
             st.query_params["reading_type"] = st.query_params["reading_type"]
@@ -290,13 +278,9 @@ elif view == "detail" and selected_station:
     # Show back button only if not embedded
     if not is_embedded:
         if st.button("Back to Map"):
-            # Preserve the embedded parameter value
-            embedded_value = st.query_params.get("embedded", "false")
-            
             st.query_params["view"] = "map"
             st.query_params["station"] = None
-            st.query_params["embedded"] = embedded_value
-            
+            st.query_params["embedded"] = "false"
             # Clear reading_type when going back to map
             if "reading_type" in st.query_params:
                 del st.query_params["reading_type"]
