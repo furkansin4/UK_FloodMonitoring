@@ -144,7 +144,26 @@ def display_station_details(station_label, station_id):
             
             # Add a filter for reading types
             reading_types = list(readings['reading_type'].unique())
-            selected_type = st.selectbox("Select reading type", reading_types)
+            
+            # Get the reading type from query params or use the first one as default
+            default_reading_type = st.query_params.get("reading_type", reading_types[0])
+            
+            # If the default_reading_type is not in the available reading types, use the first one
+            if default_reading_type not in reading_types:
+                default_reading_type = reading_types[0]
+                
+            # Find the index of the default reading type
+            default_index = reading_types.index(default_reading_type)
+            
+            # Add a filter for reading types
+            selected_type = st.selectbox("Select reading type", reading_types, index=default_index, key="reading_type_selector")
+            
+            # Update the query parameter when the reading type changes
+            if selected_type != default_reading_type:
+                st.query_params["reading_type"] = selected_type
+                st.query_params["view"] = "detail"
+                st.query_params["station"] = station_label
+                st.rerun()
             
             # Filter readings by the selected type
             filtered_readings = readings[readings['reading_type'] == selected_type]
@@ -175,10 +194,15 @@ def display_map(station_info):
             lat = float(station['lat'])
             long = float(station['long'])
             
+            # Get the reading_type parameter if it exists
+            reading_type_param = ""
+            if "reading_type" in st.query_params:
+                reading_type_param = f"&reading_type={st.query_params['reading_type']}"
+            
             # Add embedded=true parameter to the URL to indicate this is an embedded view
             popup_html = f"""
             <b>{station['label']}</b><br>
-            <a href="?view=detail&station={station['label']}&embedded=true">View Readings</a>
+            <a href="?view=detail&station={station['label']}{reading_type_param}&embedded=true">View Readings</a>
             """
             
             # Use CircleMarker instead of Marker for smaller representation
@@ -234,6 +258,9 @@ if not is_embedded:
         st.query_params["view"] = "detail"
         st.query_params["station"] = selected_station
         st.query_params["embedded"] = "false"
+        # Preserve reading_type if it exists
+        if "reading_type" in st.query_params:
+            st.query_params["reading_type"] = st.query_params["reading_type"]
         st.rerun()
 
 
@@ -253,6 +280,9 @@ elif view == "detail" and selected_station:
             st.query_params["view"] = "map"
             st.query_params["station"] = None
             st.query_params["embedded"] = "false"
+            # Clear reading_type when going back to map
+            if "reading_type" in st.query_params:
+                del st.query_params["reading_type"]
             st.rerun()
     
     # Display the station details
